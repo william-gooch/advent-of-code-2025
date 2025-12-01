@@ -15,7 +15,7 @@ macro_rules! generate {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     println!("Hello, world!");
 
     let challenge_to_run = args()
@@ -41,7 +41,8 @@ fn main() -> anyhow::Result<()> {
         Challenge12
     );
 
-    println!("{}", output?);
-
-    Ok(())
+    match output {
+        Ok(output) => println!("{}", output),
+        Err(error) => eprintln!("{:#?}", error),
+    }
 }
