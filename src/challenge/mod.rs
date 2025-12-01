@@ -1,4 +1,4 @@
-use std::{io::Read, path::Path};
+use std::{fmt::Display, io::Read, path::Path};
 
 use anyhow::Result;
 
@@ -28,10 +28,30 @@ pub use challenge_10::Challenge as Challenge10;
 pub use challenge_11::Challenge as Challenge11;
 pub use challenge_12::Challenge as Challenge12;
 
-pub trait AOCChallenge {
-    fn run(self, input: &str) -> Result<String>;
+pub struct AOCResult {
+    part_1: String,
+    part_2: String,
+}
 
-    fn run_file(self, path: &Path) -> Result<String>
+impl AOCResult {
+    pub fn new(part_1: impl Into<String>, part_2: impl Into<String>) -> AOCResult {
+        AOCResult {
+            part_1: part_1.into(),
+            part_2: part_2.into(),
+        }
+    }
+}
+
+impl Display for AOCResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Part 1: {}, Part 2: {}", self.part_1, self.part_2)
+    }
+}
+
+pub trait AOCChallenge {
+    fn run(self, input: &str) -> Result<AOCResult>;
+
+    fn run_file(self, path: &Path) -> Result<AOCResult>
     where
         Self: Sized,
     {
