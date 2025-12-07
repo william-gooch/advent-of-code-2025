@@ -5,6 +5,7 @@ use anyhow::anyhow;
 use crate::challenge::*;
 
 mod challenge;
+mod utils;
 
 macro_rules! generate {
     ( $opt_var:expr, $($i:ident),+ ) => {

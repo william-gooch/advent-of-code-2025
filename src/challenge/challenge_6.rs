@@ -15,16 +15,6 @@ enum Op {
 pub struct Challenge;
 
 impl Challenge {
-    fn ragged_to_arr<T>(table: Vec<Vec<T>>) -> Result<Array2<T>> {
-        let rows = table.len();
-        let cols = table.first().ok_or(anyhow!("no rows"))?.len();
-
-        let numbers: Vec<T> = table.into_iter().flatten().collect();
-        let numbers = Array2::from_shape_vec((rows, cols), numbers)?;
-
-        Ok(numbers)
-    }
-
     fn parse_table_p1<'a>(
         lines: impl Iterator<Item = &'a str>,
         ops: impl Iterator<Item = Op>,
@@ -37,7 +27,7 @@ impl Challenge {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let numbers = Self::ragged_to_arr(table)?;
+        let numbers = crate::utils::ragged_to_arr(table)?;
 
         let grand_total: u64 = numbers
             .axis_iter(ndarray::Axis(1))
@@ -61,7 +51,7 @@ impl Challenge {
         let chars_ragged = lines
             .map(|line| line.chars().collect::<Vec<_>>())
             .collect::<Vec<_>>();
-        let chars_arr = Self::ragged_to_arr(chars_ragged)?;
+        let chars_arr = crate::utils::ragged_to_arr(chars_ragged)?;
 
         let groups = chars_arr
             .t()
