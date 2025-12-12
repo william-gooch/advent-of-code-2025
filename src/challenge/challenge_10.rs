@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use fxhash::FxHashSet;
+use good_lp::*;
 use itertools::Itertools;
 use nalgebra::{DMatrix, DVector, LU, SVD, zero};
 use rayon::prelude::*;
@@ -153,63 +154,38 @@ impl Machine {
     // }
 
     fn optimise_joltages(&self) -> u64 {
-        let button_vecs = self
-            .buttons
-            .iter()
-            .map(|button| {
-                let mut vec = DVector::repeat(self.joltage_requirements.len(), 0f64);
-                button.iter().for_each(|b| vec[*b] = 1f64);
-                vec
-            })
-            .collect::<Vec<_>>();
+        let mut problem = ProblemVariables::new();
+        let button_vars: Vec<Variable> =
+            problem.add_all((0..self.buttons.len()).map(|_| variable().min(0).integer()));
 
-        let matr = DMatrix::from_columns(button_vecs.as_slice());
-        let inv = matr.clone().pseudo_inverse(EPS).unwrap();
+        let objective: Expression = button_vars.iter().sum();
 
-        let indeterm = (DMatrix::identity(matr.ncols(), matr.ncols()) - (&inv * &matr))
-            .map(|f| if f.abs() < EPS { 0. } else { f });
-        println!("{:#}", indeterm);
-        // let indeterm = (1..)
-        //     .find_map(|i| {
-        //         let x = (i as f64 * &indeterm);
-        //         x.iter().all(|d| is_whole(*d)).then_some(x)
-        //     })
-        //     .unwrap();
+        let joltage_to_buttons =
+            self.joltage_requirements
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(i, req)| {
+                    let req = req as u32;
+                    let relevant_buttons = self
+                        .buttons
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(button, joltages)| joltages.contains(&i).then_some(button))
+                        .map(|button| button_vars[button])
+                        .sum::<Expression>();
 
-        let joltage_req = DVector::from_row_iterator(
-            self.joltage_requirements.len(),
-            self.joltage_requirements.iter().map(|i| *i as f64),
-        );
+                    constraint!(relevant_buttons == req)
+                });
 
-        let base_solution = &inv * joltage_req;
-
-        if indeterm.rank(EPS) == 0 {
-            return base_solution.iter().map(|r| r.round() as u64).sum::<u64>();
-        }
-
-        let zero = DVector::zeros(matr.nrows());
-        let sol = (-5..5)
-            .map(|i| i as f64)
-            .combinations_with_replacement(matr.ncols())
-            .filter_map(|sol| {
-                let w = DVector::from_row_slice(sol.as_slice());
-                let diff = &indeterm * w;
-                if diff == zero {
-                    return None;
-                }
-                let sol = &base_solution + diff;
-
-                sol.iter()
-                    .all(|d| is_whole(*d) && d.round() >= 0.0)
-                    .then_some(sol)
-            })
-            .min_by_key(|sol| sol.iter().map(|r| r.round() as u64).sum::<u64>())
+        let solution = problem
+            .minimise(&objective)
+            .using(default_solver)
+            .with_all(joltage_to_buttons)
+            .solve()
             .unwrap();
 
-        let sol_presses = sol.iter().map(|r| r.round() as u64).sum::<u64>();
-        println!("{sol:#}");
-
-        sol_presses
+        solution.eval(&objective) as u64
     }
 }
 

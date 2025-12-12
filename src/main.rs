@@ -1,4 +1,5 @@
 #![feature(cmp_minmax)]
+#![feature(vec_from_fn)]
 use std::{env::args, path::Path};
 
 use anyhow::anyhow;
