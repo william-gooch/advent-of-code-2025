@@ -1,3 +1,4 @@
+#![feature(cmp_minmax)]
 use std::{env::args, path::Path};
 
 use anyhow::anyhow;
